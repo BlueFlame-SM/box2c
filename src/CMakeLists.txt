@@ -106,7 +106,7 @@ if (BOX2D_PROFILE)
 	FetchContent_Declare(
 		tracy
 		GIT_REPOSITORY https://github.com/wolfpld/tracy.git
-		GIT_TAG master
+		GIT_TAG v0.10
 		GIT_SHALLOW TRUE
 		GIT_PROGRESS TRUE
 	)

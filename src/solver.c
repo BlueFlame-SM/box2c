@@ -1225,7 +1225,8 @@ void b2Solve(b2World* world, b2StepContext* stepContext)
 				activeColorIndices[c] = i;
 
 				// 8-way SIMD
-				int colorContactCountSIMD = colorContactCount > 0 ? ((colorContactCount - 1) >> 3) + 1 : 0;
+				//int colorContactCountSIMD = colorContactCount > 0 ? ((colorContactCount - 1) >> 3) + 1 : 0;
+				int colorContactCountSIMD = colorContactCount > 0 ? (colorContactCount + 7) >> 3 : 0;  // equivalent of above ceil-division
 
 				colorContactCounts[c] = colorContactCountSIMD;
 
@@ -1240,7 +1241,8 @@ void b2Solve(b2World* world, b2StepContext* stepContext)
 				{
 					// dividing by blocksPerWorker (4)
 					colorContactBlockSizes[c] = blocksPerWorker;
-					colorContactBlockCounts[c] = ((colorContactCountSIMD - 1) >> 2) + 1;
+					//colorContactBlockCounts[c] = ((colorContactCountSIMD - 1) >> 2) + 1;
+					colorContactBlockCounts[c] = (colorContactCountSIMD + 3) >> 2;  // equivalent of above ceil-division
 				}
 				else
 				{

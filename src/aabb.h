@@ -4,7 +4,8 @@
 #pragma once
 
 #include "box2d/types.h"
-#include "x86/sse4.1.h"
+#include "x86/sse2.h"
+#include "x86/avx.h"
 
 // Ray cast an AABB
 b2CastOutput b2AABB_RayCast(b2AABB a, b2Vec2 p1, b2Vec2 p2);
@@ -58,6 +59,11 @@ static inline bool b2AABB_ContainsWithMargin(b2AABB a, b2AABB b, float margin)
 /// Do a and b overlap
 static inline bool b2AABB_Overlaps(b2AABB a, b2AABB b)
 {
-	return (b.lowerBound.x <= a.upperBound.x) & (b.lowerBound.y <= a.upperBound.y) &
-		   (a.lowerBound.x <= b.upperBound.x) & (a.lowerBound.y <= b.upperBound.y);
+	simde__m128 lower = {.m128_f32 = {b.lowerBound.x, b.lowerBound.y, a.lowerBound.x, a.lowerBound.y}};
+	simde__m128 upper = {.m128_f32 = {a.upperBound.x, a.upperBound.y, b.upperBound.x, b.upperBound.y}};
+	simde__m128 res = simde_mm_cmpgt_ps(lower, upper);
+	return simde_mm_testz_ps(res, res);
+
+	//return (b.lowerBound.x <= a.upperBound.x) & (b.lowerBound.y <= a.upperBound.y) &
+	//       (a.lowerBound.x <= b.upperBound.x) & (a.lowerBound.y <= b.upperBound.y);
 }

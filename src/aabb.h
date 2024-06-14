@@ -59,8 +59,10 @@ static inline bool b2AABB_ContainsWithMargin(b2AABB a, b2AABB b, float margin)
 /// Do a and b overlap
 static inline bool b2AABB_Overlaps(b2AABB a, b2AABB b)
 {
-	simde__m128 lower = {.m128_f32 = {b.lowerBound.x, b.lowerBound.y, a.lowerBound.x, a.lowerBound.y}};
-	simde__m128 upper = {.m128_f32 = {a.upperBound.x, a.upperBound.y, b.upperBound.x, b.upperBound.y}};
+	simde__m128 tmpA = simde_mm_loadu_ps((simde_float32*)&a); // a.lowerBound.x, a.lowerBound.y, a.upperBound.x, a.upperBound.y
+	simde__m128 tmpB = simde_mm_loadu_ps((simde_float32*)&b); // b.lowerBound.x, b.lowerBound.y, b.upperBound.x, b.upperBound.y
+	simde__m128 lower = simde_mm_movelh_ps(tmpA, tmpB);       // a.lowerBound.x, a.lowerBound.y, b.lowerBound.x, b.lowerBound.y
+	simde__m128 upper = simde_mm_movehl_ps(tmpA, tmpB);       // b.upperBound.x, b.upperBound.y, a.upperBound.x, a.upperBound.y
 	simde__m128 res = simde_mm_cmpgt_ps(lower, upper);
 	return simde_mm_testz_ps(res, res);
 

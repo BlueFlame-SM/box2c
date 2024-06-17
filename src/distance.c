@@ -7,6 +7,7 @@
 
 #include "box2d/collision.h"
 #include "box2d/math_functions.h"
+#include "internal_math_functions.h"
 
 #include <float.h>
 
@@ -205,8 +206,9 @@ static b2Simplex b2MakeSimplexFromCache(const b2DistanceCache* cache, const b2Di
 		v->indexB = cache->indexB[i];
 		b2Vec2 wALocal = proxyA->points[v->indexA];
 		b2Vec2 wBLocal = proxyB->points[v->indexB];
-		v->wA = b2TransformPoint(transformA, wALocal);
-		v->wB = b2TransformPoint(transformB, wBLocal);
+		//v->wA = b2TransformPoint(transformA, wALocal);
+		//v->wB = b2TransformPoint(transformB, wBLocal);
+		b2TransformPoints(&transformA, &transformB, &wALocal, &wBLocal, &v->wA, &v->wB);
 		v->w = b2Sub(v->wB, v->wA);
 
 		// invalid
@@ -221,8 +223,9 @@ static b2Simplex b2MakeSimplexFromCache(const b2DistanceCache* cache, const b2Di
 		v->indexB = 0;
 		b2Vec2 wALocal = proxyA->points[0];
 		b2Vec2 wBLocal = proxyB->points[0];
-		v->wA = b2TransformPoint(transformA, wALocal);
-		v->wB = b2TransformPoint(transformB, wBLocal);
+		//v->wA = b2TransformPoint(transformA, wALocal);
+		//v->wB = b2TransformPoint(transformB, wBLocal);
+		b2TransformPoints(&transformA, &transformB, &wALocal, &wBLocal, &v->wA, &v->wB);
 		v->w = b2Sub(v->wB, v->wA);
 		v->a = 1.0f;
 		s.count = 1;
@@ -579,9 +582,10 @@ b2DistanceOutput b2ShapeDistance(b2DistanceCache* cache, const b2DistanceInput* 
 		// Compute a tentative new simplex vertex using support points.
 		b2SimplexVertex* vertex = vertices[simplex.count];
 		vertex->indexA = b2FindSupport(proxyA, b2InvRotateVector(transformA.q, b2Neg(d)));
-		vertex->wA = b2TransformPoint(transformA, proxyA->points[vertex->indexA]);
+		//vertex->wA = b2TransformPoint(transformA, proxyA->points[vertex->indexA]);
 		vertex->indexB = b2FindSupport(proxyB, b2InvRotateVector(transformB.q, d));
-		vertex->wB = b2TransformPoint(transformB, proxyB->points[vertex->indexB]);
+		//vertex->wB = b2TransformPoint(transformB, proxyB->points[vertex->indexB]);
+		b2TransformPoints(&transformA, &transformB, &proxyA->points[vertex->indexA], &proxyB->points[vertex->indexB], &vertex->wA, &vertex->wB);
 		vertex->w = b2Sub(vertex->wB, vertex->wA);
 
 		// Iteration count is equated to the number of support point calls.
@@ -856,8 +860,9 @@ b2SeparationFunction b2MakeSeparationFunction(const b2DistanceCache* cache, cons
 		f.type = b2_pointsType;
 		b2Vec2 localPointA = proxyA->points[cache->indexA[0]];
 		b2Vec2 localPointB = proxyB->points[cache->indexB[0]];
-		b2Vec2 pointA = b2TransformPoint(xfA, localPointA);
-		b2Vec2 pointB = b2TransformPoint(xfB, localPointB);
+		b2Vec2 pointA /*= b2TransformPoint(xfA, localPointA)*/;
+		b2Vec2 pointB /*= b2TransformPoint(xfB, localPointB)*/;
+		b2TransformPoints(&xfA, &xfB, &localPointA, &localPointB, &pointA, &pointB);
 		f.axis = b2Normalize(b2Sub(pointB, pointA));
 		f.localPoint = b2Vec2_zero;
 		return f;
@@ -875,10 +880,11 @@ b2SeparationFunction b2MakeSeparationFunction(const b2DistanceCache* cache, cons
 		b2Vec2 normal = b2RotateVector(xfB.q, f.axis);
 
 		f.localPoint = (b2Vec2){0.5f * (localPointB1.x + localPointB2.x), 0.5f * (localPointB1.y + localPointB2.y)};
-		b2Vec2 pointB = b2TransformPoint(xfB, f.localPoint);
+		b2Vec2 pointB /*= b2TransformPoint(xfB, f.localPoint)*/;
 
 		b2Vec2 localPointA = proxyA->points[cache->indexA[0]];
-		b2Vec2 pointA = b2TransformPoint(xfA, localPointA);
+		b2Vec2 pointA /*= b2TransformPoint(xfA, localPointA)*/;
+		b2TransformPoints(&xfA, &xfB, &localPointA, &f.localPoint, &pointA, &pointB);
 
 		float s = b2Dot(b2Sub(pointA, pointB), normal);
 		if (s < 0.0f)
@@ -898,10 +904,11 @@ b2SeparationFunction b2MakeSeparationFunction(const b2DistanceCache* cache, cons
 	b2Vec2 normal = b2RotateVector(xfA.q, f.axis);
 
 	f.localPoint = (b2Vec2){0.5f * (localPointA1.x + localPointA2.x), 0.5f * (localPointA1.y + localPointA2.y)};
-	b2Vec2 pointA = b2TransformPoint(xfA, f.localPoint);
+	b2Vec2 pointA /*= b2TransformPoint(xfA, f.localPoint)*/;
 
 	b2Vec2 localPointB = proxyB->points[cache->indexB[0]];
-	b2Vec2 pointB = b2TransformPoint(xfB, localPointB);
+	b2Vec2 pointB /*= b2TransformPoint(xfB, localPointB)*/;
+	b2TransformPoints(&xfA, &xfB, &f.localPoint, &localPointB, &pointA, &pointB);
 
 	float s = b2Dot(b2Sub(pointB, pointA), normal);
 	if (s < 0.0f)
@@ -929,8 +936,9 @@ static float b2FindMinSeparation(const b2SeparationFunction* f, int32_t* indexA,
 			b2Vec2 localPointA = f->proxyA->points[*indexA];
 			b2Vec2 localPointB = f->proxyB->points[*indexB];
 
-			b2Vec2 pointA = b2TransformPoint(xfA, localPointA);
-			b2Vec2 pointB = b2TransformPoint(xfB, localPointB);
+			b2Vec2 pointA /*= b2TransformPoint(xfA, localPointA)*/;
+			b2Vec2 pointB /*= b2TransformPoint(xfB, localPointB)*/;
+			b2TransformPoints(&xfA, &xfB, &localPointA, &localPointB, &pointA, &pointB);
 
 			float separation = b2Dot(b2Sub(pointB, pointA), f->axis);
 			return separation;
@@ -939,7 +947,7 @@ static float b2FindMinSeparation(const b2SeparationFunction* f, int32_t* indexA,
 		case b2_faceAType:
 		{
 			b2Vec2 normal = b2RotateVector(xfA.q, f->axis);
-			b2Vec2 pointA = b2TransformPoint(xfA, f->localPoint);
+			b2Vec2 pointA /*= b2TransformPoint(xfA, f->localPoint)*/;
 
 			b2Vec2 axisB = b2InvRotateVector(xfB.q, b2Neg(normal));
 
@@ -947,7 +955,8 @@ static float b2FindMinSeparation(const b2SeparationFunction* f, int32_t* indexA,
 			*indexB = b2FindSupport(f->proxyB, axisB);
 
 			b2Vec2 localPointB = f->proxyB->points[*indexB];
-			b2Vec2 pointB = b2TransformPoint(xfB, localPointB);
+			b2Vec2 pointB /*= b2TransformPoint(xfB, localPointB)*/;
+			b2TransformPoints(&xfA, &xfB, &f->localPoint, &localPointB, &pointA, &pointB);
 
 			float separation = b2Dot(b2Sub(pointB, pointA), normal);
 			return separation;
@@ -956,7 +965,7 @@ static float b2FindMinSeparation(const b2SeparationFunction* f, int32_t* indexA,
 		case b2_faceBType:
 		{
 			b2Vec2 normal = b2RotateVector(xfB.q, f->axis);
-			b2Vec2 pointB = b2TransformPoint(xfB, f->localPoint);
+			b2Vec2 pointB /*= b2TransformPoint(xfB, f->localPoint)*/;
 
 			b2Vec2 axisA = b2InvRotateVector(xfA.q, b2Neg(normal));
 
@@ -964,7 +973,8 @@ static float b2FindMinSeparation(const b2SeparationFunction* f, int32_t* indexA,
 			*indexA = b2FindSupport(f->proxyA, axisA);
 
 			b2Vec2 localPointA = f->proxyA->points[*indexA];
-			b2Vec2 pointA = b2TransformPoint(xfA, localPointA);
+			b2Vec2 pointA /*= b2TransformPoint(xfA, localPointA)*/;
+			b2TransformPoints(&xfA, &xfB, &localPointA, &f->localPoint, &pointA, &pointB);
 
 			float separation = b2Dot(b2Sub(pointA, pointB), normal);
 			return separation;
@@ -991,8 +1001,9 @@ float b2EvaluateSeparation(const b2SeparationFunction* f, int32_t indexA, int32_
 			b2Vec2 localPointA = f->proxyA->points[indexA];
 			b2Vec2 localPointB = f->proxyB->points[indexB];
 
-			b2Vec2 pointA = b2TransformPoint(xfA, localPointA);
-			b2Vec2 pointB = b2TransformPoint(xfB, localPointB);
+			b2Vec2 pointA /*= b2TransformPoint(xfA, localPointA)*/;
+			b2Vec2 pointB /*= b2TransformPoint(xfB, localPointB)*/;
+			b2TransformPoints(&xfA, &xfB, &localPointA, &localPointB, &pointA, &pointB);
 
 			float separation = b2Dot(b2Sub(pointB, pointA), f->axis);
 			return separation;
@@ -1001,10 +1012,11 @@ float b2EvaluateSeparation(const b2SeparationFunction* f, int32_t indexA, int32_
 		case b2_faceAType:
 		{
 			b2Vec2 normal = b2RotateVector(xfA.q, f->axis);
-			b2Vec2 pointA = b2TransformPoint(xfA, f->localPoint);
+			b2Vec2 pointA /*= b2TransformPoint(xfA, f->localPoint)*/;
 
 			b2Vec2 localPointB = f->proxyB->points[indexB];
-			b2Vec2 pointB = b2TransformPoint(xfB, localPointB);
+			b2Vec2 pointB /*= b2TransformPoint(xfB, localPointB)*/;
+			b2TransformPoints(&xfA, &xfB, &f->localPoint, &localPointB, &pointA, &pointB);
 
 			float separation = b2Dot(b2Sub(pointB, pointA), normal);
 			return separation;
@@ -1013,10 +1025,11 @@ float b2EvaluateSeparation(const b2SeparationFunction* f, int32_t indexA, int32_
 		case b2_faceBType:
 		{
 			b2Vec2 normal = b2RotateVector(xfB.q, f->axis);
-			b2Vec2 pointB = b2TransformPoint(xfB, f->localPoint);
+			b2Vec2 pointB /*= b2TransformPoint(xfB, f->localPoint)*/;
 
 			b2Vec2 localPointA = f->proxyA->points[indexA];
-			b2Vec2 pointA = b2TransformPoint(xfA, localPointA);
+			b2Vec2 pointA /*= b2TransformPoint(xfA, localPointA)*/;
+			b2TransformPoints(&xfA, &xfB, &localPointA, &f->localPoint, &pointA, &pointB);
 
 			float separation = b2Dot(b2Sub(pointA, pointB), normal);
 			return separation;

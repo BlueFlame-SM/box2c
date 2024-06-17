@@ -29,6 +29,7 @@ set(BOX2D_SOURCE_FILES
 	hull.c
 	id_pool.c
 	id_pool.h
+	internal_math_functions.h
 	island.c
 	island.h
 	joint.c

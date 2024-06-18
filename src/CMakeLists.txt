@@ -131,7 +131,7 @@ if (MSVC)
 	target_sources(box2d PRIVATE box2d.natvis)
 
 	# Enable asserts in release with debug info
-	target_compile_definitions(box2d PUBLIC "$<$<CONFIG:RELWITHDEBINFO>:B2_ENABLE_ASSERT>")
+	# target_compile_definitions(box2d PUBLIC "$<$<CONFIG:RELWITHDEBINFO>:B2_ENABLE_ASSERT>")
 
 	# Atomics are still considered experimental in Visual Studio 17.8
 	target_compile_options(box2d PRIVATE /experimental:c11atomics)

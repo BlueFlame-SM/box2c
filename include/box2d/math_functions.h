@@ -4,6 +4,8 @@
 #pragma once
 
 #include "base.h"
+#include "x86/sse4.2.h"
+#include "x86/fma.h"
 
 #include <math.h>
 #include <stdbool.h>
@@ -238,7 +240,27 @@ B2_INLINE b2Vec2 b2Clamp(b2Vec2 v, b2Vec2 a, b2Vec2 b)
 /// Get the length of this vector (the norm)
 B2_INLINE float b2Length(b2Vec2 v)
 {
+#if 0
 	return sqrtf(v.x * v.x + v.y * v.y);
+#else
+	simde__m128 vec = simde_mm_loadu_ps((simde_float32*)&v);  // v.x           v.y ? ?
+	simde__m128 len2 = simde_mm_dp_ps(vec, vec, 0x31);        // x^2+y^2       0   0 0 
+	simde__m128 len = simde_mm_sqrt_ss(len2);                 // sqrt(x^2+y^2) 0   0 0
+	return *(float*)&len;
+#endif
+}
+
+// Get the inverse length of this vector
+B2_INLINE float b2InvLength(b2Vec2 v)
+{
+#if 0
+    return 1.0f / sqrtf(v.x * v.x + v.y * v.y);
+#else
+    simde__m128 vec = simde_mm_loadu_ps((simde_float32*)&v);  // v.x             v.y ? ?
+    simde__m128 len2 = simde_mm_dp_ps(vec, vec, 0x31);        // x^2+y^2         0   0 0
+	simde__m128 invLen = simde_mm_rsqrt_ss(len2);             // 1/sqrt(x^2+y^2) 0   0 0
+	return *(float*)&invLen;
+#endif
 }
 
 /// Get the length squared of this vector
@@ -427,6 +449,36 @@ B2_INLINE b2Vec2 b2TransformPoint(b2Transform t, const b2Vec2 p)
 	float y = (t.q.s * p.x + t.q.c * p.y) + t.p.y;
 
 	return B2_LITERAL(b2Vec2){x, y};
+}
+
+/// Transform 2 points (e.g. local space to world space)
+B2_INLINE void b2TransformPoints(b2Transform* t1, b2Transform* t2, const b2Vec2* p1, const b2Vec2* p2, b2Vec2* r1, b2Vec2* r2)
+{
+	// Load the input points
+	simde__m128 tmp1 = simde_mm_loadu_ps((simde_float32*)p1); // p1.x, p1.y, ?, ?
+	simde__m128 tmp2 = simde_mm_loadu_ps((simde_float32*)p2); // p2.x, p2.y, ?, ?
+
+	simde__m128 xx = simde_mm_shuffle_ps(tmp1, tmp2, 0x00); // p1.x, p1.x, p2.x, p2.x
+	simde__m128 yy = simde_mm_shuffle_ps(tmp1, tmp2, 0x55); // p1.y, p1.y, p2.y, p2.y
+
+	// Load the transforms
+	simde__m128 tmp3 = simde_mm_loadu_ps((simde_float32*)t1); // t1.p.x, t1.p.y, t1.q.c, t1.q.s
+	simde__m128 tmp4 = simde_mm_loadu_ps((simde_float32*)t2); // t2.p.x, t2.p.y, t2.q.c, t2.q.s
+
+	simde__m128 cs = simde_mm_shuffle_ps(tmp3, tmp4, 0xee); //  t1.q.c, t1.q.s, t2.q.c, t2.q.s
+	simde__m128 sc = simde_mm_shuffle_ps(tmp3, tmp4, 0xbb); //  t1.q.s, t1.q.c, t2.q.s, t2.q.c
+	simde__m128 oo = simde_mm_shuffle_ps(tmp3, tmp4, 0x44); //  t1.p.x, t1.p.y, t2.p.x, t2.p.y
+
+	// Perform the transformation
+	simde__m128 res = simde_mm_fmaddsub_ps(xx, cs, simde_mm_fmaddsub_ps(yy, sc, oo));
+	// p1.x * t1.q.c - (p1.y * t1.q.s - t1.p.x) === p1.x * t1.q.c - p1.y * t1.q.s + t1.p.x === p1'.x
+	// p1.x * t1.q.s + (p1.y * t1.q.c + t1.p.y) === p1.x * t1.q.s + p1.y * t1.q.c + t1.p.y === p1'.y
+	// p2.x * t2.q.c - (p2.y * t2.q.s - t2.p.x) === p2.x * t2.q.c - p2.y * t2.q.s + t2.p.x === p2'.x
+	// p2.x * t2.q.s + (p2.y * t2.q.c + t2.p.y) === p2.x * t2.q.s + p2.y * t2.q.c + t2.p.y === p2'.y
+
+	// Store the results
+	simde_mm_storel_pi((simde__m64*)r1, res);
+	simde_mm_storeh_pi((simde__m64*)r2, res);
 }
 
 /// Inverse transform a point (e.g. world space to local space)

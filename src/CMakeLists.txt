@@ -29,7 +29,6 @@ set(BOX2D_SOURCE_FILES
 	hull.c
 	id_pool.c
 	id_pool.h
-	internal_math_functions.h
 	island.c
 	island.h
 	joint.c
@@ -90,7 +89,7 @@ target_include_directories(box2d
 )
 
 # SIMDE is used to support SIMD math on multiple platforms
-target_link_libraries(box2d PRIVATE simde)
+target_link_libraries(box2d PUBLIC simde)
 
 # Box2D uses C17
 set_target_properties(box2d PROPERTIES
@@ -139,6 +138,9 @@ if (MSVC)
 	if (BOX2D_AVX2)
 		message(STATUS "Box2D using AVX2")	
 		target_compile_options(box2d PRIVATE /arch:AVX2)
+
+		# Manually define arch flags for MSVC
+		target_compile_definitions(box2d PUBLIC __SSE4_2__ )
 	endif()
 
 elseif (MINGW)

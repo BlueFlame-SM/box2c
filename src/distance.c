@@ -7,7 +7,6 @@
 
 #include "box2d/collision.h"
 #include "box2d/math_functions.h"
-#include "internal_math_functions.h"
 
 #include <float.h>
 

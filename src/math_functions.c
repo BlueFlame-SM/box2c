@@ -81,6 +81,11 @@ b2Vec2 b2NormalizeChecked(b2Vec2 v)
 #else
 	simde__m128 vector = simde_mm_loadu_ps((simde_float32*)&v);
 	simde__m128 invLength = simde_mm_rsqrt_ps(simde_mm_dp_ps(vector, vector, 0x33));
+	if (*(float*)&invLength > 1.0f / FLT_EPSILON)
+	{
+		B2_ASSERT(false);
+		return b2Vec2_zero;
+	}
 	simde__m128 result = simde_mm_mul_ps(vector, invLength);
     return *(b2Vec2*)&result;
 #endif
@@ -100,10 +105,13 @@ b2Vec2 b2GetLengthAndNormalize(float* length, b2Vec2 v)
 	return n;
 #else
 	simde__m128 vector = simde_mm_loadu_ps((simde_float32*)&v);
-    simde__m128 length2 = simde_mm_dp_ps(vector, vector, 0x33);
-	simde__m128 invLength = simde_mm_rsqrt_ps(length2);
-    simde__m128 result = simde_mm_mul_ps(vector, invLength);
+	simde__m128 invLength = simde_mm_rsqrt_ps(simde_mm_dp_ps(vector, vector, 0x33));
 	*length = 1.0f / *(float*)&invLength;
+	if (*length < FLT_EPSILON)
+	{
+		return b2Vec2_zero;
+	}
+    simde__m128 result = simde_mm_mul_ps(vector, invLength);
     return *(b2Vec2*)&result;
 #endif
 }
